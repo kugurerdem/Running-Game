@@ -1,0 +1,451 @@
+<html>
+	<head> 
+		<title> Running Game by Ugur Erdem Kucuk </title>
+	</head>
+	<body>
+		<center> 
+			<canvas id="canvas" width="650" height="550" style="border:2px solid #000000;"> </canvas> 
+			<p id="demo"></p>
+		</center>
+		
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+		<script type ="application/javascript">
+			
+			//Inputs
+			var keystate = {};
+			
+			document.onkeydown = function(e){
+				e = e || window.event;
+				if(keystate[e.keyCode] == null) keystate[e.keyCode] = true;
+				else keystate[e.keyCode] = false;
+			}
+			
+			document.onkeyup = function(e){
+				e = e || window.event;
+				keystate[e.keyCode] = null;
+			}
+			
+			//Sound effects
+			var jump = new Audio();
+			jump.src = "jump.wav";
+			var death = new Audio();
+			death.src = "fart.mp3";
+			var music = new Audio();
+			music.src = "MazeOf.mp3";
+			music.play();
+			
+			//Canvas values
+			var canvas = document.getElementById("canvas");
+			var ctx = canvas.getContext("2d");
+			var W = canvas.width;
+			var H = canvas.height;
+			var fpscounter = 0;
+			var gravity = 10; 
+			var isRendering = false;
+			var f = 1000;
+			
+			var showscene = 0;
+			var idScene = 0;
+			
+			var deaths = 0;
+			
+			function Game(){
+				this.renderFPS = 60;
+				this.gameFPS = 250;
+				
+
+				this.scenes = new Array();
+				
+				this.addScene = function(scene){
+					this.scenes.push(scene);
+				}
+				
+				this.start = function(){
+					this.gameLoop();
+				}
+				
+				this.startRender = function(){
+					this.render();
+				}
+				
+				this.gameLoop = function(){	
+					if(!isRendering){
+						isGameLooping = true;
+						
+						fpscounter++;
+						THIS = this;
+						
+						for(var i = 0; i < this.scenes[showscene].gameObjects.length; i++){
+							this.scenes[showscene].gameObjects[i].update();
+						}
+
+						isGameLooping = false;
+						setTimeout(function(){THIS.gameLoop();}, 1000/this.gameFPS);
+					}else{
+						setTimeout(function(){THIS.gameLoop();}, 20);
+					}
+				}
+				
+					
+				this.render = function(){
+					if(!isGameLooping){
+						isRendering = true;
+						var rgb1 = Math.ceil(255 * Math.random());
+						var rgb2 = Math.ceil(255 * Math.random());
+						var rgb3 = Math.ceil(255 * Math.random());
+						
+						ctx.fillStyle = 'rgba('+rgb1+','+rgb2+','+rgb3+',0.15)';
+						ctx.fillRect(0,0,W,H);
+						
+						if(showscene > 0 && showscene < 17){
+							ctx.font="15px Comic Sans MS";
+							ctx.fillStyle = "white";
+							ctx.textAlign = "center";
+							ctx.fillText(""+(showscene)+"/16", 25, 20);
+							ctx.fillText("Deaths: "+deaths,40,45);
+						}
+						
+						if(showscene == 17){
+							ctx.font="25px Comic Sans MS";
+							ctx.fillStyle = "white";
+							ctx.textAlign = "center";
+							ctx.fillText("You died "+deaths+" times", W/2, H/2-50);
+						}
+						
+						for(var i = 0; i < this.scenes[showscene].gameObjects.length; i++){
+							this.scenes[showscene].gameObjects[i].draw();
+						}
+
+						isRendering = false;
+						setTimeout(function(){THIS.render();}, 1000/this.renderFPS);
+					}
+					else{
+						isRendering = true;
+						setTimeout(function(){THIS.render();}, 0);
+					}
+				}
+			}
+			
+			function Scene(){
+				
+				this.id = idScene;
+				idScene++
+				
+				this.gameObjects = new Array();
+				this.addGameObject = function(object){
+					object.id = this.gameObjects.length;
+					object.sceneid = this.id;
+					this.gameObjects.push(object);
+				}
+			}
+			
+			function GameObject(){
+				this.position = null;
+				this.dimention = null;
+				this.color = null;
+				this.vx = 0;
+				this.vy = 0;
+				
+				this.isColliding = function(x,y,obj){				
+					return x < obj.position.x + obj.dimention.w && 
+							y < obj.position.y + obj.dimention.h && 
+							obj.position.x < x + this.dimention.w && 
+							obj.position.y < y + this.dimention.h;
+				}
+				
+				this.update = function(){}
+				
+				this.draw = function(){
+					ctx.fillStyle = this.color;
+					ctx.fillRect(this.position.x,
+								 this.position.y,
+								 this.dimention.w,
+								 this.dimention.h);
+					
+				}
+			}
+								
+			function Position(x, y){
+				this.x = x;
+				this.y = y;
+			}
+
+			function Dimention(w, h){
+				this.w = w;
+				this.h = h;
+			}
+			
+			//Player class
+			function Player(){
+				this.gravity = 0.02;
+				this.vx = 0.5;
+				this.vy = 0;
+				
+				this.color = "white";
+				
+				this.update = function(){
+					if(this.vy < 1) this.vy+= this.gravity;
+					
+					for(var i = 0; i < game.scenes[showscene].gameObjects.length; i++){
+						var obj = game.scenes[showscene].gameObjects[i];
+						
+						//If pressing UP ARROW and player is on static ground jump
+						if( keystate[38] && this.isColliding( this.position.x,this.position.y+1,obj) && obj.isStatic){
+							this.vy=-1.5;
+							keystate[38] = false;
+							jump.play(); //Play the jump sound
+						}
+						
+						//Horisontal Collision with Static objects
+						if( this.isColliding( this.position.x+this.vx,this.position.y,obj ) && obj.isStatic){
+							var sign = this.vx > 0 ? 1: -1;
+							while( !this.isColliding(this.position.x+sign,this.position.y,obj) ){
+								this.position = new Position(this.position.x+sign,this.position.y);
+							}
+							this.vx = 0;
+						}
+						//Vertical Collision with Static objects
+						if( this.isColliding( this.position.x,this.position.y+this.vy,obj ) && obj.isStatic){
+							var sign = this.vy > 0 ? 1: -1;
+							while( !this.isColliding(this.position.x,this.position.y+sign,obj) ){
+								this.position = new Position(this.position.x,this.position.y+sign);
+							}
+							this.vy = 0;
+						}
+						
+						//Collision with Deadly objects
+						if( this.isColliding( this.position.x,this.position.y,obj ) && obj.isBad ){
+							this.death();
+						}
+					}
+					
+					if(this.position.x > W){
+						ctx.clearRect(0,0,W,H);
+						showscene++
+					}
+					
+					this.position = new Position(this.position.x+this.vx,this.position.y+this.vy);
+				}
+				
+				this.death = function(){
+					this.position.x = 20;
+					this.position.y = 376;
+					this.vy = 0;
+					deaths++
+					death.play();
+				}
+			}
+			Player.prototype = $.extend({}, new GameObject, new Player);
+			
+			//Wall class
+			function Wall(){
+				this.isStatic = true;
+				this.color = "white";
+			}
+			Wall.prototype = $.extend({}, new GameObject, new Wall);
+			//Lava class
+			function Lava(){
+				this.isBad = true;
+				this.color = "white";
+			}
+			Lava.prototype = $.extend({}, new GameObject, new Lava);
+
+			
+			//PressSpace object for menu
+			function PressSpace(){
+				this.update = function(){
+					if(keystate[32]){
+						ctx.clearRect(0,0,W,H);
+						showscene++
+					}
+				}
+				this.draw = function(){
+					ctx.font="30px Comic Sans MS";
+					ctx.fillStyle = "white";
+					ctx.textAlign = "center";
+					ctx.fillText("Press space button to start the game", canvas.width/2, canvas.height/2);
+				}
+			}
+			
+			function Text(text,x,y){
+				this.position = new Position(x,y);
+				
+				this.update = function(){
+				
+				}
+				
+				this.draw = function(){
+					ctx.font="25px Comic Sans MS";
+					ctx.fillStyle = "white";
+					ctx.textAlign = "center";
+					ctx.fillText(text, this.position.x, this.position.y);
+				}
+			}
+			
+			function addGameObject(scene,obj,position,dimention){
+				var OBJ = obj;
+				OBJ.position = position;
+				OBJ.dimention = dimention;
+				scene.addGameObject(OBJ);
+			}
+			
+			var game = new Game();
+			
+			var menu = new Scene();
+			var pressSpace = new PressSpace();
+			menu.addGameObject(pressSpace);
+			game.addScene(menu);
+			
+			var scene1 = new Scene();
+			addGameObject(scene1, new Wall(), new Position(0,400), new Dimention(W,2));
+			addGameObject(scene1, new Player(),new Position(20,376),new Dimention(24,24));
+			game.addScene(scene1);
+			
+			var scene2 = new Scene();
+			addGameObject(scene2, new Wall(), new Position(0,400), new Dimention(W,2));
+			addGameObject(scene2, new Lava(), new Position(165,390), new Dimention(30,10));
+			addGameObject(scene2, new Lava(), new Position(315,390), new Dimention(30,10));
+			addGameObject(scene2, new Lava(), new Position(465,390), new Dimention(30,10));
+			addGameObject(scene2, new Player(), new Position(20,376), new Dimention(24,24));
+			game.addScene(scene2);
+			
+			var scene3 = new Scene();
+			addGameObject(scene3, new Wall(), new Position(0,400), new Dimention(W,2));
+			addGameObject(scene3, new Lava(), new Position(165,390), new Dimention(30,10));
+			addGameObject(scene3, new Lava(), new Position(315,380), new Dimention(30,20));
+			addGameObject(scene3, new Lava(), new Position(465,370), new Dimention(24,30));
+			addGameObject(scene3, new Player(), new Position(20,376), new Dimention(24,24));
+			game.addScene(scene3);
+			
+			
+			var scene4 = new Scene();
+			addGameObject(scene4, new Wall(), new Position(0,400), new Dimention(W,2));
+			addGameObject(scene4, new Lava(), new Position(150,365), new Dimention(150,10));
+			addGameObject(scene4, new Lava(), new Position(350,390), new Dimention(30,10));
+			addGameObject(scene4, new Lava(), new Position(450,380), new Dimention(15,20));
+			addGameObject(scene4, new Lava(), new Position(465,390), new Dimention(20,10));
+			addGameObject(scene4, new Player(), new Position(20,376), new Dimention(24,24));
+			game.addScene(scene4);
+			
+			var scene5 = new Scene();
+			addGameObject(scene5, new Wall(), new Position(0,400), new Dimention(W,2));
+			addGameObject(scene5, new Lava(), new Position(182,370), new Dimention(18,30));
+			addGameObject(scene5, new Lava(), new Position(250,350), new Dimention(100,15));
+			addGameObject(scene5, new Lava(), new Position(398,370), new Dimention(18,30));
+			addGameObject(scene5, new Lava(), new Position(500,376), new Dimention(24,24));
+			addGameObject(scene5, new Player(), new Position(20,376), new Dimention(24,24));
+			game.addScene(scene5);
+			
+			var scene6 = new Scene();
+			addGameObject(scene6, new Wall(), new Position(0,400), new Dimention(W,2));
+			addGameObject(scene6, new Lava(), new Position(311,365), new Dimention(20,35));
+			addGameObject(scene6, new Player(), new Position(20,376), new Dimention(24,24));
+			game.addScene(scene6);
+			
+			var scene7 = new Scene();
+			addGameObject(scene7, new Wall(), new Position(0,400), new Dimention(W,2));
+			addGameObject(scene7, new Lava(), new Position(200,380), new Dimention(15,20));
+			addGameObject(scene7, new Lava(), new Position(300,365), new Dimention(15,35));
+			addGameObject(scene7, new Lava(), new Position(400,380), new Dimention(15,20));
+			addGameObject(scene7, new Lava(), new Position(505,385), new Dimention(15,15));
+			addGameObject(scene7, new Lava(), new Position(520,372), new Dimention(15,28));
+			addGameObject(scene7, new Player(), new Position(20,376), new Dimention(24,24));
+			game.addScene(scene7);
+			
+			var scene8 = new Scene();
+			addGameObject(scene8, new Wall(), new Position(0,400), new Dimention(W,2));
+			addGameObject(scene8, new Lava(), new Position(200,376), new Dimention(24,24));
+			addGameObject(scene8, new Lava(), new Position(400,376), new Dimention(24,24));
+			addGameObject(scene8, new Lava(), new Position(424,388), new Dimention(14,12));
+			addGameObject(scene8, new Player(), new Position(20,376), new Dimention(24,24));
+			game.addScene(scene8);
+			
+			var scene9 = new Scene();
+			addGameObject(scene9, new Wall(), new Position(0,400), new Dimention(W,2));
+			addGameObject(scene9, new Lava(), new Position(170,358), new Dimention(100,16));
+			addGameObject(scene9, new Lava(), new Position(320,388), new Dimention(12,12));
+			addGameObject(scene9, new Lava(), new Position(332,370), new Dimention(16,30));
+			addGameObject(scene9, new Lava(), new Position(438,388), new Dimention(12,12));
+			addGameObject(scene9, new Lava(), new Position(450,370), new Dimention(16,30));
+			addGameObject(scene9, new Player(), new Position(20,376), new Dimention(24,24));
+			game.addScene(scene9);
+			
+			var scene10 = new Scene();
+			addGameObject(scene10, new Wall(), new Position(0,400), new Dimention(W,2));
+			addGameObject(scene10, new Lava(), new Position(140,376), new Dimention(24,24));
+			addGameObject(scene10, new Lava(), new Position(195,340), new Dimention(120,16));
+			addGameObject(scene10, new Lava(), new Position(346,376), new Dimention(24,24));
+			addGameObject(scene10, new Lava(), new Position(411,340), new Dimention(120,16));
+			addGameObject(scene10, new Lava(), new Position(572,370), new Dimention(24,30));			
+			addGameObject(scene10, new Player(), new Position(20,376), new Dimention(24,24));
+			game.addScene(scene10);
+			
+			var scene11 = new Scene();
+			addGameObject(scene11, new Wall(), new Position(0,400), new Dimention(W,2));
+			addGameObject(scene11, new Lava(), new Position(140,388), new Dimention(15,12));
+			addGameObject(scene11, new Lava(), new Position(155,370), new Dimention(15,30));
+			addGameObject(scene11, new Lava(), new Position(170,395), new Dimention(15,5));
+			addGameObject(scene11, new Lava(), new Position(280,392), new Dimention(45,8));
+			addGameObject(scene11, new Lava(), new Position(410,390), new Dimention(45,10));
+			addGameObject(scene11, new Player(), new Position(20,376), new Dimention(24,24));
+			game.addScene(scene11);
+			
+			var scene12 = new Scene();
+			addGameObject(scene12, new Wall(), new Position(0,400), new Dimention(W,2));
+			addGameObject(scene12, new Lava(), new Position(150,370), new Dimention(24,30));
+			addGameObject(scene12, new Lava(), new Position(230,370), new Dimention(24,30));
+			addGameObject(scene12, new Lava(), new Position(310,370), new Dimention(24,30));
+			addGameObject(scene12, new Lava(), new Position(390,370), new Dimention(24,30));
+			addGameObject(scene12, new Lava(), new Position(470,370), new Dimention(24,30));
+			addGameObject(scene12, new Player(), new Position(20,376), new Dimention(24,24));
+			game.addScene(scene12);
+			
+			var scene13 = new Scene();
+			addGameObject(scene13, new Wall(), new Position(0,400), new Dimention(W,2));
+			addGameObject(scene13, new Lava(), new Position(130,360), new Dimention(70,12));
+			addGameObject(scene13, new Lava(), new Position(240,390), new Dimention(45,10));
+			addGameObject(scene13, new Lava(), new Position(370,370), new Dimention(24,30));
+			addGameObject(scene13, new Lava(), new Position(480,380), new Dimention(20,20));
+			addGameObject(scene13, new Player(), new Position(20,376), new Dimention(24,24));
+			game.addScene(scene13);
+			
+			var scene14 = new Scene();
+			addGameObject(scene14, new Wall(), new Position(0,400), new Dimention(W,2));
+			addGameObject(scene14, new Lava(), new Position(130,390), new Dimention(45,10));
+			addGameObject(scene14, new Lava(), new Position(230,385), new Dimention(35,15));
+			addGameObject(scene14, new Lava(), new Position(305,350), new Dimention(70,12));
+			addGameObject(scene14, new Lava(), new Position(415,385), new Dimention(35,15));
+			addGameObject(scene14, new Lava(), new Position(490,350), new Dimention(70,12));
+			addGameObject(scene14, new Player(), new Position(20,376), new Dimention(24,24));
+			game.addScene(scene14);
+			
+			var scene15 = new Scene();
+			addGameObject(scene15, new Wall(), new Position(0,400), new Dimention(W,2));
+			addGameObject(scene15, new Lava(), new Position(311,365), new Dimention(20,35));
+			addGameObject(scene15, new Lava(), new Position(200,365), new Dimention(20,35));
+			addGameObject(scene15, new Lava(), new Position(422,365), new Dimention(20,35));
+			addGameObject(scene15, new Player(), new Position(20,376), new Dimention(24,24));
+			game.addScene(scene15);
+			
+			var scene16 = new Scene();
+			addGameObject(scene16, new Wall(), new Position(0,400), new Dimention(W,2));
+			addGameObject(scene16, new Lava(), new Position(130,362), new Dimention(300,12));
+			addGameObject(scene16, new Lava(), new Position(468,370), new Dimention(24,30));
+			addGameObject(scene16, new Player(), new Position(20,376), new Dimention(24,24));
+			game.addScene(scene16);
+			
+			var gameEnd = new Scene();
+			gameEnd.addGameObject(new Text("Thanks for playing!",W/2,H/2));
+			gameEnd.addGameObject(new Text("Ugur Erdem Kucuk",W-150,H-50));
+			game.addScene(gameEnd);
+			
+			showscene = 0;
+			game.start();
+			game.startRender();
+			
+			
+			//setInterval(function (){f = fpscounter; fpscounter = 0; console.log(f);}, 1000);
+
+		</script>
+	</body>
+</html>

@@ -217,6 +217,16 @@
 						if( this.isColliding( this.position.x,this.position.y,obj ) && obj.isBad ){
 							this.death();
 						}
+						
+						// if pressed M then pause the music
+						if( keystate[77] ){
+						    if (music.paused) {
+							music.play();
+						    } else {
+							music.pause();
+						    }	
+						}
+						
 					}
 					
 					if(this.position.x > W){

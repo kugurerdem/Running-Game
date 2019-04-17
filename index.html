@@ -90,9 +90,9 @@
 				this.render = function(){
 					if(!isGameLooping){
 						isRendering = true;
-						var rgb1 = Math.ceil(255 * Math.random());
-						var rgb2 = Math.ceil(255 * Math.random());
-						var rgb3 = Math.ceil(255 * Math.random());
+						var rgb1 = Math.ceil(255);
+						var rgb2 = Math.ceil(255);
+						var rgb3 = Math.ceil(255);
 						
 						ctx.fillStyle = 'rgba('+rgb1+','+rgb2+','+rgb3+',0.15)';
 						ctx.fillRect(0,0,W,H);

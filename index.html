@@ -34,7 +34,7 @@
 			death.src = "fart.mp3";
 			var music = new Audio();
 			music.src = "MazeOf.mp3";
-			music.play();
+			// music.play();
 			
 			//Canvas values
 			var canvas = document.getElementById("canvas");
@@ -105,8 +105,8 @@
 							ctx.textAlign = "center";
 							ctx.fillText(""+(showscene)+"/16", 25, 20);
 							ctx.fillText("Deaths: "+deaths,40,45);
-							ctx.fillText(" M : Mute music", 40, 70);
-							ctx.fillText(" S : Mute SFX", 40, 95);
+							ctx.fillText(" M : Music", 40, 70);
+							ctx.fillText(" S : SFX", 40, 95);
 						}
 						
 						if(showscene == 17){

@@ -105,6 +105,8 @@
 							ctx.textAlign = "center";
 							ctx.fillText(""+(showscene)+"/16", 25, 20);
 							ctx.fillText("Deaths: "+deaths,40,45);
+							ctx.fillText(" M : Mute music", 40, 70);
+							ctx.fillText(" S : Mute SFX", 40, 95);
 						}
 						
 						if(showscene == 17){
@@ -222,8 +224,6 @@
 						
 						// if pressed M then pause the music
 						if( keystate[77] ){
-							
-						    Console.log("Pressed M");
 						    if (music.paused) {
 							music.play();
 						    } else {
@@ -231,6 +231,13 @@
 						    }	
 							
 					            keystate[77] = false;
+						}
+						
+						// if pressed S then mute the sound effects
+						if( keystate[83] ){
+					            death.muted = !death.muted;
+						    jump.muted = !jump.muted;
+						    keystate[83] = false;	
 						}
 						
 					}
